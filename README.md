@@ -30,15 +30,15 @@ Exact package versions are listed in `environment/requirements.txt`.
 
 ```mermaid
 graph TD
-    %% --- STYLING (UPDATED FOR HIGH CONTRAST) ---
-    %% Core: Stronger Blue for the main pipeline
-    classDef core fill:#90CAF9,stroke:#1565C0,stroke-width:3px;
-    %% Input: Deeper Gold/Amber to stand out against white
-    classDef input fill:#FFF59D,stroke:#FBC02D,stroke-width:2px;
-    %% Decision: Distinct Red/Pink for logic gates
-    classDef decision fill:#EF9A9A,stroke:#C62828,stroke-width:2px;
-    %% Output: Solid Green for results
-    classDef output fill:#A5D6A7,stroke:#2E7D32,stroke-width:2px;
+    %% --- STYLING (UPDATED FOR HIGHER CONTRAST) ---
+    %% Core: Vibrant Blue
+    classDef core fill:#64B5F6,stroke:#0D47A1,stroke-width:3px;
+    %% Input: Golden/Amber (Easier to see than pale yellow)
+    classDef input fill:#FFD54F,stroke:#F57F17,stroke-width:2px;
+    %% Decision: Stronger Red/Salmon
+    classDef decision fill:#E57373,stroke:#B71C1C,stroke-width:2px;
+    %% Output: Darker Green (as requested)
+    classDef output fill:#66BB6A,stroke:#1B5E20,stroke-width:2px;
 
     %% --- BLOCK 0: VALIDATION ---
     subgraph B0 [BLOCK 0: Validation Layer]
