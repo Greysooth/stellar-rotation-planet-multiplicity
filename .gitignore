@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Data & outputs
+data/raw/*
+results/phase2_plots/*
+*.fits
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Notebooks
+.ipynb_checkpoints/

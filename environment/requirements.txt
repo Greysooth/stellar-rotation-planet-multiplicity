@@ -1,0 +1,8 @@
+numpy
+scipy
+pandas
+matplotlib
+lightkurve>=2.4
+astropy>=6.0
+astroquery
+tqdm
