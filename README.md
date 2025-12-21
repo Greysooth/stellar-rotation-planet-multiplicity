@@ -24,7 +24,7 @@ Exact package versions are listed in `environment/requirements.txt`.
 
 ## Status
 - Phase 1 (Sample Selection): Completed
-- Phase 2 (Rotation Analysis): Pilot run in progress
+- Phase 2 (Rotation Analysis): Pilot run completed
 
 ## System Architecture
 

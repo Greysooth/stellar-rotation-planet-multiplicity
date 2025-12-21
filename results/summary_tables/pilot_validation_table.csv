@@ -1,0 +1,22 @@
+TIC_ID,Pipeline_Flag,Pipeline_Period_days,Validation_Decision,Confidence,Preferred_Fold,Notes
+192464657,Match,6.993,Accept,Medium,P,"Low-amplitude, noise-dominated"
+20766994,Harmonic_Corrected,12.75,Accept,High,P,Harmonic correction justified
+22750743,Match,1.481,Reject,High,Neither,Eclipses / non-rotational variability
+29015116,Match,11.941,Reject,Medium,Neither,Transient contamination
+219780306,Harmonic_Corrected,14.917,Accept,Medium,P,Near single-sector baseline limit
+229742951,Match,9.906,Accept,High,P,Clean rotational modulation
+235928353,Match,7.908,Accept,Medium,P,Spot evolution
+250602194,Harmonic_Corrected,1.5,Accept,High,P/2,Classic double-dip morphology
+256324377,Match,9.13,Accept,Medium,P,Weak but plausible rotation
+256746748,Match,11.932,Accept,High,P,Strong rotational modulation
+268319776,Match,7.895,Accept,Medium,P,Low-amplitude signal
+269663324,Match,9.906,Reject,Medium,Neither,Likely instrumental artifact
+293066086,Harmonic_Corrected,0.917,Accept,High,P/2,Fast-rotator double-dip
+327729815,Harmonic_Corrected,8.083,Reject,High,Neither,Flare-dominated variability
+357032546,Match,0.513,Reject,High,Neither,Aliasing / systematics
+359496368,Match,11.923,Accept,Medium,P,Weak but consistent modulation
+379084450,Match,10.857,Reject,Medium,Neither,Transient contamination
+385254633,Match,6.98,Accept,Medium,P,Low-amplitude rotation
+387676042,Match,5.158,Reject,High,Neither,Noise-dominated
+407210683,Match,10.878,Accept,Medium,P,Rotation with spot evolution
+461496554,Harmonic_Corrected,8.667,Accept,High,P,Harmonic correction supported

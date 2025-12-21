@@ -10,7 +10,7 @@ import os
 # ======================================================
 SECTOR = 18
 INPUT_SAMPLE = "sector18_mdwarf_sample.csv"   # From Phase 1
-OUTPUT_FILE = "phase2_rotation_results.csv"
+OUTPUT_CSV = "data/processed/phase2_rotation_results_pilot.csv"
 PLOT_DIR = "phase2_plots"
 
 MAX_STARS = 100              # Process first 100, select 50 later
