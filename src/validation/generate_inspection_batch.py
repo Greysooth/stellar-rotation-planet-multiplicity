@@ -24,7 +24,6 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 SECTOR = 18
 N_MATCH_SAMPLE = 15
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 print("\n--- GENERATING PILOT INSPECTION BATCH ---\n")
 
@@ -117,7 +116,7 @@ def make_validation_plot(tic_id, period, flag):
         axes[1].set_xlabel("Phase")
 
         outname = f"TIC{tic_id}_{flag}.png"
-        plt.savefig(os.path.join(OUTPUT_DIR, outname), dpi=120)
+        plt.savefig(OUTPUT_DIR / outname, dpi=120)
         plt.close()
 
     except Exception as e:

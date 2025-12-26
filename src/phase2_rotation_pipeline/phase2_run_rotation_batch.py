@@ -1,43 +1,40 @@
 import lightkurve as lk
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
-import os
+from pathlib import Path
+
+# ======================================================
+# PROJECT ROOT
+# ======================================================
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # ======================================================
 # CONFIGURATION
 # ======================================================
 SECTOR = 18
-INPUT_SAMPLE = "sector18_mdwarf_sample.csv"   # From Phase 1
-OUTPUT_CSV = "data/processed/phase2_rotation_results_pilot.csv"
-PLOT_DIR = "phase2_plots"
 
-MAX_STARS = 100              # Process first 100, select 50 later
-VARIABILITY_CUT = 0.0015     # Save plots only if variability > this
+INPUT_SAMPLE = PROJECT_ROOT / "data" / "processed" / "sector18_mdwarf_sample.csv"
+OUTPUT_CSV = PROJECT_ROOT / "data" / "processed" / "phase2_rotation_results_pilot.csv"
 
-os.makedirs(PLOT_DIR, exist_ok=True)
+MAX_STARS = 100   # Pilot batch size
 
-print("\n--- PHASE 2: ROTATION PERIOD ANALYSIS ---")
+print("\n--- PHASE 2: ROTATION PERIOD ANALYSIS (PILOT) ---")
 print(f"Sector            : {SECTOR}")
-print(f"Max stars         : {MAX_STARS}")
-print(f"Variability cut   : {VARIABILITY_CUT}\n")
+print(f"Input sample      : {INPUT_SAMPLE}")
+print(f"Output CSV        : {OUTPUT_CSV}")
+print(f"Max stars         : {MAX_STARS}\n")
 
 # ======================================================
 # LOAD SAMPLE
 # ======================================================
 sample = pd.read_csv(INPUT_SAMPLE)
 
-# ---- Detect TIC column automatically ----
 possible_tic_cols = ["TIC_ID", "ticid", "TIC", "ID"]
-tic_col = None
-for col in possible_tic_cols:
-    if col in sample.columns:
-        tic_col = col
-        break
+tic_col = next((c for c in possible_tic_cols if c in sample.columns), None)
 
 if tic_col is None:
-    raise RuntimeError(f"No TIC ID column found. Columns: {sample.columns.tolist()}")
+    raise RuntimeError("No TIC ID column found in input sample.")
 
 print(f"Using TIC column: {tic_col}")
 
@@ -62,18 +59,16 @@ def choose_rotation_period(P_ls, P_acf):
 # MAIN LOOP
 # ======================================================
 results = []
-processed = 0
 
-for _, row in sample.iterrows():
-    if processed >= MAX_STARS:
+for i, row in sample.iterrows():
+    if i >= MAX_STARS:
         break
 
     tic_id = int(row[tic_col])
 
     try:
-        print(f"[{processed+1}/{MAX_STARS}] TIC {tic_id}")
+        print(f"[{i+1}/{MAX_STARS}] TIC {tic_id}")
 
-        # --- DOWNLOAD ---
         search = lk.search_lightcurve(
             f"TIC {tic_id}",
             mission="TESS",
@@ -82,19 +77,21 @@ for _, row in sample.iterrows():
         )
 
         if len(search) == 0:
-            print("  No SPOC data — skipping.")
+            print("  -> No SPOC data")
             continue
 
         lc = search[0].download()
+        lc = lc.remove_nans().normalize().bin(time_bin_size=2/24)
 
-        # --- PREPROCESS ---
-        lc = lc.remove_nans().normalize()
-        lc_binned = lc.bin(time_bin_size=2/24)
+        # -----------------------------
+        # Variability (diagnostic only)
+        # -----------------------------
+        variability = np.nanstd(lc.flux.value)
 
-        variability = np.nanstd(lc_binned.flux.value)
-
-        # --- LOMB–SCARGLE ---
-        ls = lc_binned.to_periodogram(
+        # -----------------------------
+        # Lomb–Scargle
+        # -----------------------------
+        ls = lc.to_periodogram(
             method="lombscargle",
             minimum_period=0.5,
             maximum_period=15
@@ -103,15 +100,21 @@ for _, row in sample.iterrows():
         ls_period = ls.period_at_max_power.value
         ls_power = ls.max_power.value
 
-        # --- ACF ---
-        flux = np.array(lc_binned.flux.value, dtype=float)
-        time = np.array(lc_binned.time.value, dtype=float)
-
-        if np.any(np.isnan(flux)):
-            flux = np.nan_to_num(flux, nan=np.nanmedian(flux))
-
+        # -----------------------------
+        # ACF
+        # -----------------------------
+        flux = np.nan_to_num(
+            lc.flux.value,
+            nan=np.nanmedian(lc.flux.value)
+        )
+        time = lc.time.value
         cadence = np.median(np.diff(time))
-        acf = np.correlate(flux - np.mean(flux), flux - np.mean(flux), mode="full")
+
+        acf = np.correlate(
+            flux - flux.mean(),
+            flux - flux.mean(),
+            mode="full"
+        )
         acf = acf[len(acf)//2:]
         acf /= np.max(acf)
 
@@ -119,51 +122,37 @@ for _, row in sample.iterrows():
         peaks, _ = find_peaks(acf, height=0.2, distance=10)
         valid_peaks = [lags[p] for p in peaks if lags[p] > 0.5]
 
-        acf_period = valid_peaks[0] if len(valid_peaks) > 0 else np.nan
+        acf_period = valid_peaks[0] if valid_peaks else np.nan
 
-        # --- DECISION ---
+        # -----------------------------
+        # Final decision
+        # -----------------------------
         final_period, flag = choose_rotation_period(ls_period, acf_period)
 
-        # --- SAVE RESULT ---
         results.append({
-        "TIC_ID": int(tic_id),
-        "Teff": float(row["Teff"]) if "Teff" in row and not pd.isna(row["Teff"]) else np.nan,
-        "logg": float(row["logg"]) if "logg" in row and not pd.isna(row["logg"]) else np.nan,
-        "Tmag": float(row["Tmag"]) if "Tmag" in row and not pd.isna(row["Tmag"]) else np.nan,
-        "LS_Period": round(float(ls_period), 4),
-        "LS_Power": round(float(ls_power), 6),
-        "ACF_Period": round(float(acf_period), 4) if not np.isnan(acf_period) else np.nan,
-        "Final_Period": round(float(final_period), 4),
-        "Flag": flag,
-        "Variability": round(float(variability), 6)
+            "TIC_ID": tic_id,
+            "Teff": float(row["Teff"]) if "Teff" in row and not pd.isna(row["Teff"]) else np.nan,
+            "logg": float(row["logg"]) if "logg" in row and not pd.isna(row["logg"]) else np.nan,
+            "Tmag": float(row["Tmag"]) if "Tmag" in row and not pd.isna(row["Tmag"]) else np.nan,
+            "LS_Period": round(ls_period, 4),
+            "LS_Power": round(ls_power, 6),
+            "ACF_Period": round(acf_period, 4) if not np.isnan(acf_period) else np.nan,
+            "Final_Period": round(final_period, 4),
+            "Flag": flag,
+            "Variability": round(variability, 6)
         })
-
-
-        # --- SAVE PLOT (ONLY IF VARIABLE) ---
-        if variability >= VARIABILITY_CUT:
-            fig, ax = plt.subplots(figsize=(6, 4))
-            folded = lc_binned.fold(period=final_period)
-            folded.scatter(ax=ax, s=2, alpha=0.6)
-            ax.set_title(f"TIC {tic_id} | P={final_period:.2f} d | {flag}")
-            plt.tight_layout()
-            plt.savefig(f"{PLOT_DIR}/TIC{tic_id}_fold.png", dpi=120)
-            plt.close(fig)
-
-        processed += 1
 
     except Exception as e:
         print(f"  ERROR: {e}")
-        continue
 
 # ======================================================
 # EXPORT RESULTS
 # ======================================================
 df = pd.DataFrame(results)
-df.to_csv(OUTPUT_FILE, index=False)
+df.to_csv(OUTPUT_CSV, index=False)
 
-print("\n--- PHASE 2 COMPLETE ---")
+print("\n--- PHASE 2 PILOT COMPLETE ---")
 print(f"Stars processed : {len(df)}")
-print(f"Results saved   : {OUTPUT_FILE}")
-print(f"Plots directory : {PLOT_DIR}/")
+print(f"Results saved   : {OUTPUT_CSV}")
 print("\nFlag summary:")
 print(df["Flag"].value_counts())

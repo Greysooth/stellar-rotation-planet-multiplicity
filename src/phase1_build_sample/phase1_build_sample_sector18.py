@@ -3,24 +3,35 @@ import re
 import pandas as pd
 from astroquery.mast import Observations, Catalogs
 from tqdm import tqdm
+from pathlib import Path
+
 
 # ============================================================
 # CONFIG
 # ============================================================
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SECTOR = 18
-CACHE_FILE = "tic_sector18_cache.csv"
-OUTPUT_FILE = "sector18_mdwarf_sample.csv"
+
+
+CACHE_FILE = PROJECT_ROOT / "data" / "raw" / "tic_sector18_cache_sector18.csv"
+OUTPUT_FILE = PROJECT_ROOT / "data" / "processed" / "sector18_mdwarf_sample.csv"
 
 TEFF_MIN = 2500
 TEFF_MAX = 4000
 LOGG_MIN = 4.0
 
+CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+print(f"Project root      : {PROJECT_ROOT}")
+print(f"Cache file        : {CACHE_FILE}")
+print(f"Output file       : {OUTPUT_FILE}")
 print("\n--- PHASE 1: BUILDING M-DWARF SAMPLE (CACHED, FIXED) ---\n")
 
 # ============================================================
 # STEP 1: LOAD CACHE IF EXISTS
 # ============================================================
-if os.path.exists(CACHE_FILE):
+if CACHE_FILE.exists():
     print("Cache found. Loading TIC catalog cache...")
     tic_df = pd.read_csv(CACHE_FILE)
 
