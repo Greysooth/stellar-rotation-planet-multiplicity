@@ -53,8 +53,12 @@ print(f"[LS] Period = {ls_period:.4f} d | Power = {ls_power:.5f}")
 # ======================================================
 # ACF
 # ======================================================
-flux = np.nan_to_num(lc_binned.flux.value, nan=np.nanmedian(lc_binned.flux.value))
-time = lc_binned.time.value
+flux = np.array(lc_binned.flux.value, dtype=float)
+time = np.array(lc_binned.time.value, dtype=float)
+
+if np.any(np.isnan(flux)):
+    flux = np.nan_to_num(flux, nan=np.nanmedian(flux))
+
 cadence = np.median(np.diff(time))
 
 acf = np.correlate(flux - flux.mean(), flux - flux.mean(), mode="full")
@@ -106,22 +110,28 @@ plt.savefig(OUTDIR / "lc_and_periodogram.png", dpi=200)
 plt.close()
 
 # ======================================================
-# PLOT 3: HALF-PERIOD DIAGNOSTIC (BINNED)
+# PLOT 3: HALF-PERIOD DIAGNOSTIC (BINNED, MANUAL)
 # ======================================================
 fig, ax = plt.subplots(figsize=(8, 4), constrained_layout=True)
 
 fold_half = lc_binned.fold(ls_period / 2)
-fold_half.scatter(ax=ax, s=3, alpha=0.4)
-fold_half.bin(bins=50).plot(ax=ax, lw=2, color="red")
+
+phase = fold_half.phase.value
+flux  = np.array(fold_half.flux.value, dtype=float)
+
+# Manual phase binning (robust against masked-array issues)
+bins = np.linspace(-0.5, 0.5, 51)
+digitized = np.digitize(phase, bins)
+binned_flux = [np.nanmean(flux[digitized == i]) for i in range(1, len(bins))]
+bin_centers = 0.5 * (bins[:-1] + bins[1:])
+
+ax.scatter(phase, flux, s=3, alpha=0.4, label="Data")
+ax.plot(bin_centers, binned_flux, color="red", lw=2, label="Binned mean")
 
 ax.set_title(f"Half-period diagnostic (P/2 = {ls_period/2:.3f} d)")
 ax.set_xlabel("Phase")
 ax.set_ylabel("Normalized Flux")
+ax.legend()
 
 plt.savefig(OUTDIR / "half_period_diagnostic.png", dpi=200)
 plt.close()
-
-print("\nSaved plots:")
-print(" - folded_P_and_P2.png (Phase-2 consistent)")
-print(" - lc_and_periodogram.png (diagnostic)")
-print(" - half_period_diagnostic.png")
