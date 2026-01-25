@@ -114,91 +114,76 @@ TESS data.
 
 ```mermaid
 graph TD
-    %% --- STYLING ---
-    classDef core fill:#64B5F6,stroke:#0D47A1,stroke-width:3px;
+
+    %% =========================
+    %% INPUT DATA
+    %% =========================
+    TESS["TESS Sector 18<br>PDCSAP Light Curves"]:::input
+
+    %% =========================
+    %% PHASE 1: SAMPLE
+    %% =========================
+    subgraph P1["PHASE 1: Sample Construction"]
+        Filters["Late-Type Dwarf Filters<br>(2500K ≤ Teff ≤ 4000K,<br>log g ≥ 4.0)"]
+        Sample["sector18_mdwarf_sample.csv"]:::output
+        TESS --> Filters --> Sample
+    end
+
+    %% =========================
+    %% PHASE 2: ROTATION PIPELINE
+    %% =========================
+    subgraph P2["PHASE 2: Rotation Inference Pipeline"]
+        Preproc["Preprocessing<br>(NaN removal, median norm,<br>no aggressive detrending)"]
+        LS["Lomb–Scargle<br>(0.5–15 d, FAP < 1%)"]
+        ACF["Autocorrelation<br>(lag > 0.5 d)"]
+        Logic{"Harmonic-Aware<br>Decision Logic"}:::decision
+        Diag["Phase-Fold Diagnostics<br>(P and P/2)"]
+        Catalog["Rotation Output<br>(P_final, Flag)"]:::output
+
+        Preproc --> LS
+        Preproc --> ACF
+        LS --> Logic
+        ACF --> Logic
+        Logic --> Diag --> Catalog
+    end
+
+    Sample --> Preproc
+
+    %% =========================
+    %% PHASE 3: INJECTION–RECOVERY
+    %% =========================
+    subgraph P3["PHASE 3: Injection–Recovery Experiment"]
+        Inject["Inject Synthetic<br>Rotation Signals"]
+        RunPipe["Run Same Rotation<br>Pipeline"]
+        Metrics["Recovery & Harmonic<br>Statistics"]:::output
+
+        TESS --> Inject --> RunPipe --> Metrics
+    end
+
+    %% Reuse the same pipeline conceptually
+    RunPipe -.-> P2
+
+    %% =========================
+    %% PHASE 4: RELIABILITY MODEL
+    %% =========================
+    subgraph P4["PHASE 4: Reliability Calibration"]
+        Rscore["Calibrate Reliability Score R"]:::output
+    end
+
+    Metrics --> Rscore
+    Catalog --> Rscore
+
+    %% =========================
+    %% FINAL PRODUCT
+    %% =========================
+    Final["Final Rotation Catalog<br>(P_final, Flag, R)"]:::output
+    Rscore --> Final
+
+
+    %% =========================
+    %% STYLES
+    %% =========================
     classDef input fill:#FFD54F,stroke:#F57F17,stroke-width:2px;
     classDef decision fill:#E57373,stroke:#B71C1C,stroke-width:2px;
     classDef output fill:#66BB6A,stroke:#1B5E20,stroke-width:2px;
-    classDef validate fill:#CE93D8,stroke:#4A148C,stroke-width:2px;
-
-    %% --- BLOCK 0: SINGLE-STAR VALIDATION ---
-    subgraph B0 [BLOCK 0: Diagnostic Validation]
-        direction TB
-        VIn[/"Input: Known TESS Targets <br> (Single Stars)"/]:::input
-        VProc["Single-Star Pipeline Run <br> (LS + ACF + Folding)"]
-        VCheck["Visual Inspection <br> (P vs P/2 Morphology)"]
-        VOut[/"Output: Sanity-Checked Logic <br> & Fixed Thresholds"/]:::validate
-
-        VIn --> VProc --> VCheck --> VOut
-    end
-
-    %% --- BLOCK 1: SAMPLE CONSTRUCTION ---
-    subgraph B1 [PHASE 1: Sample Construction]
-        direction TB
-        Archive[("TESS MAST Archive <br> (SPOC PDCSAP)")]:::input
-        Filters["Apply Dwarf Filters: <br> 2500 K ≤ Teff ≤ 4000 K <br> log g ≥ 4.0"]
-        SampleCSV[/"Output: sector18_mdwarf_sample.csv"/]:::output
-
-        Archive --> Filters --> SampleCSV
-    end
-
-    VOut -.-> B1
-
-    %% --- BLOCK 2: CORE ROTATION PIPELINE ---
-    subgraph B2 [PHASE 2: Harmonic-Aware Rotation Pipeline]
-        direction TB
-
-        Preproc["Preprocessing: <br> NaN Removal, Median Norm, <br> Optional 2-hr Binning"]
-
-        LS["Lomb–Scargle <br> (0.5–15 d, FAP < 1%)"]
-        ACF["Autocorrelation <br> (Lag > 0.5 d)"]
-
-        Logic{"Harmonic-Aware <br> Decision Engine"}:::decision
-
-        H1["LS ≈ P/2 → Use ACF"]
-        H2["LS ≈ 2P → Use ACF"]
-        Agree["LS ≈ ACF → Use LS"]
-        LSOnly["ACF Fail → LS Only"]
-
-        Diag["Phase-Fold Diagnostics <br> (P and P/2)"]
-
-        FinalCat[/"Output: Rotation Catalog <br> (P_final + Flag)"/]:::output
-
-        SampleCSV --> Preproc
-        Preproc --> LS & ACF
-        LS & ACF --> Logic
-
-        Logic -- "P_ACF ≈ 2·P_LS" --> H1
-        Logic -- "P_ACF ≈ 0.5·P_LS" --> H2
-        Logic -- "Agreement" --> Agree
-        Logic -- "No ACF" --> LSOnly
-
-        H1 & H2 & Agree & LSOnly --> Diag --> FinalCat
-    end
-
-    class B2 core
-
-    %% --- BLOCK 3: INJECTION–RECOVERY ---
-    subgraph B3 [PHASE 3: Injection–Recovery Validation]
-        direction TB
-        RealLC[/"Real Sector 18 Light Curves"/]:::input
-        Inject["Inject Synthetic Signals <br> (P_true, Amplitude, Phase)"]
-        RunPipe["Run Unmodified Pipeline"]
-        Compare["Compare P_final vs P_true"]
-        Metrics[/"Output: Recovery & Harmonic Rates"/]:::validate
-
-        RealLC --> Inject --> RunPipe --> Compare --> Metrics
-    end
-
-    %% --- BLOCK 4: RELIABILITY LAYER ---
-    subgraph B4 [PHASE 4: Reliability Calibration]
-        direction TB
-        Features["Extract Diagnostics: <br> LS Power, ACF Peak, Agreement"]
-        Score["Compute R = 0–3"]
-        Calib["Map R → Recovery Probability"]
-        FinalOut[/"Output: Reliability-Aware Catalog <br> (P, Flag, R)"/]:::output
-
-        FinalCat --> Features --> Score
-        Metrics --> Calib
-        Score --> Calib --> FinalOut
-    end
+ 
