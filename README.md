@@ -82,19 +82,19 @@ to future work.
 
 ## Reproducibility
 
-# 1. Build stellar sample (Sector 18 late-type dwarfs)
+### 1. Build stellar sample (Sector 18 late-type dwarfs)
 python src/phase1_build_sample/phase1_build_sample_sector18.py
 
-# 2. Run rotation inference pipeline (LS + ACF + harmonic logic)
+### 2. Run rotation inference pipeline (LS + ACF + harmonic logic)
 python src/phase2_rotation_pipeline/phase2_run_rotation_full.py
 
-# 3. Assign reliability scores (R = 0–3)
+### 3. Assign reliability scores (R = 0–3)
 python analysis/assign_rotation_reliability.py
 
-# 4. Perform injection–recovery validation
+### 4. Perform injection–recovery validation
 python src/validation/injection_recovery.py
 
-# 5. Generate figures used in the manuscript
+### 5. Generate figures used in the manuscript
 python analysis/make_injection_validation_plots.py
 python analysis/make_summary_plots.py
 
